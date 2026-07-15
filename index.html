@@ -557,7 +557,7 @@
 const SUPABASE_URL = 'https://yrggufrjhfeolhuybgdb.supabase.co';
 const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InlyZ2d1ZnJqaGZlb2xodXliZ2RiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODQwNzY5NTQsImV4cCI6MjA5OTY1Mjk1NH0.PxJp_CeWdg9A8dMqGnUSsDW8xNNvooIPIcEwM6ak3X4';
 
-const SUPABASE_CONFIGURADO = !SUPABASE_URL.includes('https://yrggufrjhfeolhuybgdb.supabase.co') && !SUPABASE_ANON_KEY.includes('eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InlyZ2d1ZnJqaGZlb2xodXliZ2RiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODQwNzY5NTQsImV4cCI6MjA5OTY1Mjk1NH0.PxJp_CeWdg9A8dMqGnUSsDW8xNNvooIPIcEwM6ak3X4');
+const SUPABASE_CONFIGURADO = !SUPABASE_URL.includes('PEGA_AQUI') && !SUPABASE_ANON_KEY.includes('PEGA_AQUI');
 
 async function supabaseRequest(path, options = {}){
   if(!SUPABASE_CONFIGURADO){
