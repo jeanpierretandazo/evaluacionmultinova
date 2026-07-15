@@ -572,12 +572,14 @@ async function supabaseRequest(path, options = {}){
       ...(options.headers || {})
     }
   });
-  if(!res.ok){
+if(!res.ok){
     const texto = await res.text().catch(() => '');
     throw new Error('Error de base de datos (' + res.status + '): ' + texto);
   }
-  if(res.status === 204) return null;
-  return res.json();
+  const texto = await res.text();
+  if(!texto) return null;
+  try{ return JSON.parse(texto); }
+  catch(e){ return null; }
 }
 
 async function loadResultados(){
