@@ -270,7 +270,7 @@
     width: 34px; height:34px; flex-shrink:0; cursor:pointer; font-size:14px;
   }
 
-  /* Footer + Modo Facilitador */
+  /* Footer + Modo Capacitador */
   .footer-fac{
     max-width: 780px; margin: 48px auto 0; text-align:center;
     padding-top: 18px; border-top: 1px solid var(--line);
@@ -286,8 +286,8 @@
   .fac-gate .btn{ width: 100%; margin-top: 8px; }
   .fac-gate .fac-error{ font-size: 11.5px; color: var(--red); margin-top: 6px; display:none; }
 
-  #viewFacilitador{ display:none; max-width: 780px; margin: 20px auto 0; text-align:left; }
-  #viewFacilitador.show{ display:block; }
+  #viewCapacitador{ display:none; max-width: 780px; margin: 20px auto 0; text-align:left; }
+  #viewCapacitador.show{ display:block; }
   .fac-title{ font-family: var(--font-display); font-size: 18px; color: var(--purple-dark); margin-bottom: 14px; text-align:center; }
 
   .stat-cards{ display:flex; gap:12px; flex-wrap:wrap; margin-bottom:22px; }
@@ -393,7 +393,6 @@
       <div class="caso-box">
         <div class="caso-tag">Caso de estudio</div>
         <p>Consultaste al cliente en la plataforma y el resultado indica que <strong>SÍ califica para el crédito Resuelve</strong>. Ahora debes indagar con el cliente los datos de su domicilio a través de WhatsApp para completar correctamente la solicitud.</p>
-        <p class="caso-tip">Escribe tus preguntas en el chat de abajo (ej: "¿cuál es su ubicación?", "¿en qué sector vive?", "¿manzana y villa?", "¿cuáles son las calles?", "¿algún punto de referencia?"). Copia las respuestas del cliente: las necesitarás para llenar la evaluación.</p>
       </div>
 
       <div class="wa-phone">
@@ -503,16 +502,16 @@
   </div>
 
   <div class="footer-fac">
-    <button class="fac-link" id="facLinkBtn" onclick="toggleFacGate()">Modo Facilitador</button>
+    <button class="fac-link" id="facLinkBtn" onclick="toggleFacGate()">Modo Capacitador</button>
     <div class="fac-gate" id="facGate">
       <input type="password" id="facPassword" placeholder="Palabra clave">
-      <button class="btn btn-purple" onclick="validarFacilitador()">Ingresar</button>
+      <button class="btn btn-purple" onclick="validarCapacitador()">Ingresar</button>
       <div class="fac-error" id="facError">Palabra clave incorrecta.</div>
     </div>
   </div>
 
-  <div id="viewFacilitador">
-    <div class="fac-title">Modo Facilitador — Panel de Grupo</div>
+  <div id="viewCapacitador">
+    <div class="fac-title">Modo Capacitador — Panel de Grupo</div>
 
     <div class="import-box">
       <div class="hint">Los datos de todos los independientes se sincronizan automáticamente en esta base — no necesitas pedirle nada a nadie.</div>
@@ -1191,15 +1190,15 @@ function reiniciar(){
 }
 
 // =========================================================
-// Modo Facilitador
+// Modo Capacitador
 // =========================================================
-let facilitadorDesbloqueado = false;
+let CapacitadorDesbloqueado = false;
 const FAC_PASSWORD = 'ClaudeCAP';
 
 function toggleFacGate(){
   const gate = document.getElementById('facGate');
-  if(facilitadorDesbloqueado){
-    const view = document.getElementById('viewFacilitador');
+  if(CapacitadorDesbloqueado){
+    const view = document.getElementById('viewCapacitador');
     const showing = view.classList.contains('show');
     view.classList.toggle('show', !showing);
     if(!showing) renderDashboard();
@@ -1209,17 +1208,17 @@ function toggleFacGate(){
   document.getElementById('facPassword').focus();
 }
 
-function validarFacilitador(){
+function validarCapacitador(){
   const val = document.getElementById('facPassword').value;
   const errEl = document.getElementById('facError');
   if(val === FAC_PASSWORD){
-    facilitadorDesbloqueado = true;
+    CapacitadorDesbloqueado = true;
     errEl.style.display = 'none';
     document.getElementById('facGate').classList.remove('show');
     document.getElementById('facPassword').value = '';
-    document.getElementById('viewFacilitador').classList.add('show');
+    document.getElementById('viewCapacitador').classList.add('show');
     renderDashboard();
-    document.getElementById('viewFacilitador').scrollIntoView({behavior:'smooth', block:'start'});
+    document.getElementById('viewCapacitador').scrollIntoView({behavior:'smooth', block:'start'});
   } else {
     errEl.style.display = 'block';
   }
