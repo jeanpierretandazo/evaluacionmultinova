@@ -270,7 +270,7 @@
     width: 34px; height:34px; flex-shrink:0; cursor:pointer; font-size:14px;
   }
 
-  /* Footer + Modo Capacitador */
+  /* Footer + Modo Facilitador */
   .footer-fac{
     max-width: 780px; margin: 48px auto 0; text-align:center;
     padding-top: 18px; border-top: 1px solid var(--line);
@@ -286,8 +286,8 @@
   .fac-gate .btn{ width: 100%; margin-top: 8px; }
   .fac-gate .fac-error{ font-size: 11.5px; color: var(--red); margin-top: 6px; display:none; }
 
-  #viewCapacitador{ display:none; max-width: 780px; margin: 20px auto 0; text-align:left; }
-  #viewCapacitador.show{ display:block; }
+  #viewFacilitador{ display:none; max-width: 780px; margin: 20px auto 0; text-align:left; }
+  #viewFacilitador.show{ display:block; }
   .fac-title{ font-family: var(--font-display); font-size: 18px; color: var(--purple-dark); margin-bottom: 14px; text-align:center; }
 
   .stat-cards{ display:flex; gap:12px; flex-wrap:wrap; margin-bottom:22px; }
@@ -333,6 +333,28 @@
   .modal-text{ font-size: 13.5px; color: var(--ink-muted); margin: 0 0 20px; line-height:1.5; }
   .modal-actions{ display:flex; gap: 10px; }
   .modal-actions .btn{ flex:1; }
+
+  .modal-box.modal-detail{
+    max-width: 520px; text-align:left; max-height: 84vh; overflow-y:auto;
+  }
+  .detail-section-title{
+    font-family: var(--font-display); font-size: 14.5px; color: var(--purple-dark);
+    margin: 18px 0 8px;
+  }
+  .detail-section-title:first-of-type{ margin-top: 4px; }
+  .detail-field{ margin-bottom: 10px; }
+  .detail-field .df-label{
+    font-size: 11px; font-weight: 700; color: var(--ink-muted);
+    text-transform: uppercase; letter-spacing: .03em; margin-bottom: 2px;
+  }
+  .detail-field .df-value{ font-size: 13.5px; color: var(--ink); white-space: pre-wrap; line-height:1.4; }
+  .detail-verdict{
+    display:block; text-align:center; font-weight:700; font-size: 13.5px;
+    padding: 10px 12px; border-radius: 10px; margin-bottom: 4px;
+  }
+
+  table.loc-table tr.clickable-row{ cursor: pointer; }
+  table.loc-table tr.clickable-row:hover td{ background: var(--purple-pale); }
 
   @media (max-width: 560px){
     .card{ padding: 8px 16px 6px; }
@@ -393,6 +415,7 @@
       <div class="caso-box">
         <div class="caso-tag">Caso de estudio</div>
         <p>Consultaste al cliente en la plataforma y el resultado indica que <strong>SÍ califica para el crédito Resuelve</strong>. Ahora debes indagar con el cliente los datos de su domicilio a través de WhatsApp para completar correctamente la solicitud.</p>
+        <p class="caso-tip">Escribe tus preguntas en el chat de abajo (ej: "¿cuál es su ubicación?", "¿en qué sector vive?", "¿manzana y villa?", "¿cuáles son las calles?", "¿algún punto de referencia?"). Copia las respuestas del cliente: las necesitarás para llenar la evaluación.</p>
       </div>
 
       <div class="wa-phone">
@@ -502,16 +525,16 @@
   </div>
 
   <div class="footer-fac">
-    <button class="fac-link" id="facLinkBtn" onclick="toggleFacGate()">Modo Capacitador</button>
+    <button class="fac-link" id="facLinkBtn" onclick="toggleFacGate()">Modo Facilitador</button>
     <div class="fac-gate" id="facGate">
       <input type="password" id="facPassword" placeholder="Palabra clave">
-      <button class="btn btn-purple" onclick="validarCapacitador()">Ingresar</button>
+      <button class="btn btn-purple" onclick="validarFacilitador()">Ingresar</button>
       <div class="fac-error" id="facError">Palabra clave incorrecta.</div>
     </div>
   </div>
 
-  <div id="viewCapacitador">
-    <div class="fac-title">Modo Capacitador — Panel de Grupo</div>
+  <div id="viewFacilitador">
+    <div class="fac-title">Modo Facilitador — Panel de Grupo</div>
 
     <div class="import-box">
       <div class="hint">Los datos de todos los independientes se sincronizan automáticamente en esta base — no necesitas pedirle nada a nadie.</div>
@@ -546,6 +569,16 @@
   </div>
 </div>
 
+<div class="modal-overlay" id="modalDetalle">
+  <div class="modal-box modal-detail">
+    <div class="modal-title" id="detalleTitle">Detalle de evaluación</div>
+    <div id="detalleBody"></div>
+    <div class="modal-actions" style="margin-top:18px;">
+      <button class="btn btn-eval" style="flex:1;" onclick="cerrarModalDetalle()">Cerrar</button>
+    </div>
+  </div>
+</div>
+
 <script>
 // =========================================================
 // Conexión a base de datos (Supabase)
@@ -553,8 +586,8 @@
 // PASO PREVIO REQUERIDO: crea un proyecto gratis en supabase.com,
 // crea la tabla "evaluaciones" (ver instrucciones aparte) y pega aquí
 // tu Project URL y tu clave "anon public".
-const SUPABASE_URL = 'https://yrggufrjhfeolhuybgdb.supabase.co';
-const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InlyZ2d1ZnJqaGZlb2xodXliZ2RiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODQwNzY5NTQsImV4cCI6MjA5OTY1Mjk1NH0.PxJp_CeWdg9A8dMqGnUSsDW8xNNvooIPIcEwM6ak3X4';
+const SUPABASE_URL = 'PEGA_AQUI_TU_SUPABASE_URL';
+const SUPABASE_ANON_KEY = 'PEGA_AQUI_TU_SUPABASE_ANON_KEY';
 
 const SUPABASE_CONFIGURADO = !SUPABASE_URL.includes('PEGA_AQUI') && !SUPABASE_ANON_KEY.includes('PEGA_AQUI');
 
@@ -571,7 +604,7 @@ async function supabaseRequest(path, options = {}){
       ...(options.headers || {})
     }
   });
-if(!res.ok){
+  if(!res.ok){
     const texto = await res.text().catch(() => '');
     throw new Error('Error de base de datos (' + res.status + '): ' + texto);
   }
@@ -1026,6 +1059,7 @@ function agregarMensajeUbicacion(){
 
 let lastRecord = null;
 let modalCallback = null;
+let dashboardSortedData = [];
 
 function mostrarConfirmacion(titulo, texto, botonTexto, onConfirm){
   document.getElementById('modalTitle').textContent = titulo;
@@ -1044,6 +1078,51 @@ function ejecutarConfirmacion(){
   const cb = modalCallback;
   cerrarModalConfirmacion();
   if(cb) cb();
+}
+
+// =========================================================
+// Modal de detalle de evaluación por independiente (dashboard)
+// =========================================================
+function verDetalleIndependiente(idx){
+  const r = dashboardSortedData[idx];
+  if(!r) return;
+
+  document.getElementById('detalleTitle').textContent = r.nombre + ' · Código ' + r.codigo;
+
+  const body = document.getElementById('detalleBody');
+  body.innerHTML = `
+    <div class="detail-verdict" style="background:${r.aprobado ? 'var(--green-pale)' : 'var(--red-pale)'}; color:${r.aprobado ? 'var(--green)' : 'var(--red)'};">
+      ${r.aprobado ? 'APROBADO' : 'REPROBADO'} · Puntaje ${r.total.toFixed(2)} / 10.00
+    </div>
+
+    <div class="detail-section-title">Datos generales</div>
+    <div class="detail-field"><div class="df-label">Localidad</div><div class="df-value">${escapeHtml(r.localidad)}</div></div>
+    <div class="detail-field"><div class="df-label">Fecha / hora de envío</div><div class="df-value">${new Date(r.ts).toLocaleString('es-EC')}</div></div>
+    ${(r.provDetectada || r.cantDetectado || r.parrDetectada) ? `<div class="detail-field"><div class="df-label">Provincia / Cantón / Parroquia detectados</div><div class="df-value">${escapeHtml(r.provDetectada || '—')} / ${escapeHtml(r.cantDetectado || '—')} / ${escapeHtml(r.parrDetectada || '—')}</div></div>` : ''}
+
+    <div class="detail-section-title">Respuestas ingresadas por el independiente</div>
+    <div class="detail-field"><div class="df-label">Ubicación (Plus Code / coordenadas)</div><div class="df-value">${escapeHtml(r.ubicacionRaw || '—')}</div></div>
+    <div class="detail-field"><div class="df-label">Sector / Barrio</div><div class="df-value">${escapeHtml(r.sectorRaw || '—')}</div></div>
+    <div class="detail-field"><div class="df-label">Manzana</div><div class="df-value">${escapeHtml(r.manzanaRaw || '—')}</div></div>
+    <div class="detail-field"><div class="df-label">Villa</div><div class="df-value">${escapeHtml(r.villaRaw || '—')}</div></div>
+    <div class="detail-field"><div class="df-label">Calles</div><div class="df-value">${escapeHtml(r.callesRaw || '—')}</div></div>
+    <div class="detail-field"><div class="df-label">Referencia del domicilio</div><div class="df-value">${escapeHtml(r.referenciaRaw || '—')}</div></div>
+
+    <div class="detail-section-title">Desglose de puntaje</div>
+    <div class="breakdown">
+      ${row('1. Ubicación (Plus Code / coordenadas)', r.loc, 3)}
+      ${row('2. Sector / Barrio validado', r.sector, 1)}
+      ${row('3. Manzana y Villa', r.mz, 1)}
+      ${row('4. Calles (principal y secundaria)', r.calles, 2)}
+      ${row('5. Referencia del domicilio', r.ref, 3, `Color ${r.refDetalle.color}/1 · Punto de referencia ${r.refDetalle.puntoRef}/2`)}
+    </div>
+  `;
+
+  document.getElementById('modalDetalle').classList.add('show');
+}
+
+function cerrarModalDetalle(){
+  document.getElementById('modalDetalle').classList.remove('show');
 }
 
 function evaluar(){
@@ -1190,15 +1269,15 @@ function reiniciar(){
 }
 
 // =========================================================
-// Modo Capacitador
+// Modo Facilitador
 // =========================================================
-let CapacitadorDesbloqueado = false;
+let facilitadorDesbloqueado = false;
 const FAC_PASSWORD = 'ClaudeCAP';
 
 function toggleFacGate(){
   const gate = document.getElementById('facGate');
-  if(CapacitadorDesbloqueado){
-    const view = document.getElementById('viewCapacitador');
+  if(facilitadorDesbloqueado){
+    const view = document.getElementById('viewFacilitador');
     const showing = view.classList.contains('show');
     view.classList.toggle('show', !showing);
     if(!showing) renderDashboard();
@@ -1208,17 +1287,17 @@ function toggleFacGate(){
   document.getElementById('facPassword').focus();
 }
 
-function validarCapacitador(){
+function validarFacilitador(){
   const val = document.getElementById('facPassword').value;
   const errEl = document.getElementById('facError');
   if(val === FAC_PASSWORD){
-    CapacitadorDesbloqueado = true;
+    facilitadorDesbloqueado = true;
     errEl.style.display = 'none';
     document.getElementById('facGate').classList.remove('show');
     document.getElementById('facPassword').value = '';
-    document.getElementById('viewCapacitador').classList.add('show');
+    document.getElementById('viewFacilitador').classList.add('show');
     renderDashboard();
-    document.getElementById('viewCapacitador').scrollIntoView({behavior:'smooth', block:'start'});
+    document.getElementById('viewFacilitador').scrollIntoView({behavior:'smooth', block:'start'});
   } else {
     errEl.style.display = 'block';
   }
@@ -1351,8 +1430,9 @@ async function renderDashboard(){
 
   html += '<div class="section-title">Detalle por independiente evaluado' + (sel!=='__all__' ? ' — ' + escapeHtml(sel) : '') + '</div>';
   html += '<table class="loc-table"><tr><th>Nombre</th><th>Código</th><th>Localidad</th><th>Fecha/Hora</th><th>Puntaje</th><th>Estado</th></tr>';
-  data.slice().sort((a,b) => a.total - b.total).forEach(r => {
-    html += `<tr><td>${escapeHtml(r.nombre)}</td><td>${escapeHtml(r.codigo)}</td><td>${escapeHtml(r.localidad)}</td><td>${new Date(r.ts).toLocaleString('es-EC')}</td><td>${r.total.toFixed(2)}</td><td><span class="pill-status ${r.aprobado ? 'pass' : 'fail'}">${r.aprobado ? 'Aprobado' : 'Reprobado'}</span></td></tr>`;
+  dashboardSortedData = data.slice().sort((a,b) => a.total - b.total);
+  dashboardSortedData.forEach((r, idx) => {
+    html += `<tr class="clickable-row" onclick="verDetalleIndependiente(${idx})" title="Ver evaluación al detalle"><td>${escapeHtml(r.nombre)}</td><td>${escapeHtml(r.codigo)}</td><td>${escapeHtml(r.localidad)}</td><td>${new Date(r.ts).toLocaleString('es-EC')}</td><td>${r.total.toFixed(2)}</td><td><span class="pill-status ${r.aprobado ? 'pass' : 'fail'}">${r.aprobado ? 'Aprobado' : 'Reprobado'}</span></td></tr>`;
   });
   html += '</table>';
 
