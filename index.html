@@ -316,6 +316,13 @@
 
   .empty-state{ text-align:center; color:var(--ink-muted); font-size:13.5px; padding: 44px 20px; background:#fff; border:1px dashed var(--line); border-radius:12px; }
 
+  table.loc-table tr.row-clickable{ cursor:pointer; }
+  table.loc-table tr.row-clickable:hover{ background:var(--purple-pale); }
+
+  .detalle-field{ margin-bottom: 10px; font-size: 13px; }
+  .detalle-field .label{ font-weight:600; color:var(--purple-dark); font-size:11px; text-transform:uppercase; letter-spacing:.03em; }
+  .detalle-field .value{ margin-top:2px; color:var(--ink); line-height:1.4; }
+
   /* Modal de confirmación */
   .modal-overlay{
     display:none; position:fixed; inset:0; background:rgba(36,27,47,0.55);
@@ -326,6 +333,8 @@
     background:#fff; border-radius:16px; padding: 26px 24px; max-width: 320px;
     width:100%; text-align:center; box-shadow: 0 12px 40px rgba(0,0,0,0.25);
   }
+  .modal-box.modal-box-wide{ max-width: 460px; text-align:left; max-height: 82vh; overflow-y:auto; }
+  .modal-box.modal-box-wide .modal-title{ text-align:center; }
   .modal-title{
     font-family: var(--font-display); font-size: 19px; font-weight:700;
     color: var(--purple-dark); margin-bottom: 8px;
@@ -546,6 +555,16 @@
     <div class="modal-actions">
       <button class="btn btn-ghost" onclick="cerrarModalConfirmacion()">Cancelar</button>
       <button class="btn btn-eval" id="modalConfirmarBtn" onclick="ejecutarConfirmacion()">Sí, enviar</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="modalDetalle">
+  <div class="modal-box modal-box-wide">
+    <div class="modal-title" id="detalleTitle">Detalle de evaluación</div>
+    <div id="detalleContent"></div>
+    <div class="modal-actions" style="margin-top:16px;">
+      <button class="btn btn-purple" style="flex:1;" onclick="cerrarModalDetalle()">Cerrar</button>
     </div>
   </div>
 </div>
@@ -1023,6 +1042,49 @@ function agregarMensajeUbicacion(){
 
 let lastRecord = null;
 let modalCallback = null;
+let dashboardDetailRows = [];
+
+function mostrarDetalleIndependiente(idx){
+  const r = dashboardDetailRows[idx];
+  if(!r) return;
+
+  document.getElementById('detalleTitle').textContent = r.nombre + ' — Código ' + r.codigo;
+
+  const campos = [
+    ['Localidad', r.localidad],
+    ['Fecha/Hora', new Date(r.ts).toLocaleString('es-EC')],
+    ['Ubicación ingresada', r.ubicacionRaw],
+    ['Provincia detectada', r.provDetectada],
+    ['Cantón detectado', r.cantDetectado],
+    ['Parroquia detectada', r.parrDetectada],
+    ['Sector / Barrio', r.sectorRaw],
+    ['Manzana', r.manzanaRaw],
+    ['Villa', r.villaRaw],
+    ['Calles', r.callesRaw],
+    ['Referencia del domicilio', r.referenciaRaw],
+  ];
+
+  let html = campos.map(([label, value]) =>
+    `<div class="detalle-field"><div class="label">${escapeHtml(label)}</div><div class="value">${value ? escapeHtml(value) : '—'}</div></div>`
+  ).join('');
+
+  html += `<div class="detalle-field"><div class="label">Resultado</div><div class="value">${r.total.toFixed(2)} / 10.00 — <strong style="color:${r.aprobado ? 'var(--green)' : 'var(--red)'}">${r.aprobado ? 'Aprobado' : 'Reprobado'}</strong></div></div>`;
+
+  html += '<div class="breakdown" style="margin-top:12px;">' +
+    row('1. Ubicación', r.loc, 3) +
+    row('2. Sector / Barrio', r.sector, 1) +
+    row('3. Manzana y Villa', r.mz, 1) +
+    row('4. Calles', r.calles, 2) +
+    row('5. Referencia del domicilio', r.ref, 3, `Color ${r.refDetalle.color}/1 · Punto de referencia ${r.refDetalle.puntoRef}/2`) +
+    '</div>';
+
+  document.getElementById('detalleContent').innerHTML = html;
+  document.getElementById('modalDetalle').classList.add('show');
+}
+
+function cerrarModalDetalle(){
+  document.getElementById('modalDetalle').classList.remove('show');
+}
 
 function mostrarConfirmacion(titulo, texto, botonTexto, onConfirm){
   document.getElementById('modalTitle').textContent = titulo;
@@ -1302,12 +1364,15 @@ async function renderDashboard(){
     (selFecha === '__all__' || new Date(r.ts).toLocaleDateString('es-EC') === selFecha)
   );
 
+  const filtroTxt = [sel!=='__all__' ? sel : null, selFecha!=='__all__' ? selFecha : null].filter(Boolean).join(' — ');
+  const filtroTxtCard = filtroTxt ? ' (' + filtroTxt + ')' : '';
+
   if(all.length === 0){
     container.innerHTML = '<div class="empty-state">Aún no hay evaluaciones registradas. Se completarán automáticamente aquí a medida que los independientes envíen sus evaluaciones.</div>';
     return;
   }
   if(data.length === 0){
-    container.innerHTML = '<div class="empty-state">No hay evaluaciones registradas para esta localidad.</div>';
+    container.innerHTML = '<div class="empty-state">No hay evaluaciones registradas para este filtro.</div>';
     return;
   }
 
@@ -1317,15 +1382,15 @@ async function renderDashboard(){
   const tasaAprob = data.filter(r => r.aprobado).length / totalEval * 100;
 
   let html = `<div class="stat-cards">
-    <div class="stat-card"><div class="num">${totalEval}</div><div class="lbl">Evaluaciones${sel!=='__all__' ? ' (' + escapeHtml(sel) + ')' : ''}</div></div>
+    <div class="stat-card"><div class="num">${totalEval}</div><div class="lbl">Evaluaciones${filtroTxtCard}</div></div>
     <div class="stat-card"><div class="num">${promedio.toFixed(2)}</div><div class="lbl">Promedio general /10</div></div>
     <div class="stat-card"><div class="num">${tasaAprob.toFixed(0)}%</div><div class="lbl">Tasa de aprobación</div></div>
-    <div class="stat-card"><div class="num">${new Set(all.map(r => r.localidad)).size}</div><div class="lbl">Localidades registradas</div></div>
+    <div class="stat-card"><div class="num">${new Set(data.map(r => r.localidad)).size}</div><div class="lbl">Localidades${filtroTxtCard ? ' (filtradas)' : ' registradas'}</div></div>
   </div>`;
 
   const byLoc = {};
-  all.forEach(r => { (byLoc[r.localidad] = byLoc[r.localidad] || []).push(r); });
-  html += '<div class="section-title">Resultados por localidad</div>';
+  data.forEach(r => { (byLoc[r.localidad] = byLoc[r.localidad] || []).push(r); });
+  html += '<div class="section-title">Resultados por localidad' + (filtroTxt ? ' — ' + escapeHtml(filtroTxt) : '') + '</div>';
   html += '<table class="loc-table"><tr><th>Localidad</th><th>Evaluados</th><th>Promedio</th><th>% Aprobados</th></tr>';
   Object.keys(byLoc).sort((a,b) => a.localeCompare(b)).forEach(loc => {
     const recs = byLoc[loc];
@@ -1337,7 +1402,6 @@ async function renderDashboard(){
 
   const maxes = { loc:3, sector:1, mz:1, calles:2, ref:3 };
   const labels = { loc:'Ubicación', sector:'Sector/Barrio', mz:'Manzana y Villa', calles:'Calles', ref:'Referencia del domicilio' };
-  const filtroTxt = [sel!=='__all__' ? sel : null, selFecha!=='__all__' ? selFecha : null].filter(Boolean).join(' — ');
 
   html += '<div class="section-title">Puntos débiles del grupo' + (filtroTxt ? ' — ' + escapeHtml(filtroTxt) : '') + '</div><div class="breakdown">';
   ['loc','sector','mz','calles','ref'].forEach(k => {
@@ -1345,7 +1409,7 @@ async function renderDashboard(){
   });
   html += '</div>';
 
-  html += '<div class="section-title">Detalle de Referencia del domicilio</div><div class="breakdown">';
+  html += '<div class="section-title">Detalle de Referencia del domicilio' + (filtroTxt ? ' — ' + escapeHtml(filtroTxt) : '') + '</div><div class="breakdown">';
   const refLabels = { color:'Color de la vivienda', puntoRef:'Punto de referencia + distancia/dirección' };
   const refMaxes = { color:1, puntoRef:2 };
   ['color','puntoRef'].forEach(k => {
@@ -1355,8 +1419,9 @@ async function renderDashboard(){
 
   html += '<div class="section-title">Detalle por independiente evaluado' + (filtroTxt ? ' — ' + escapeHtml(filtroTxt) : '') + '</div>';
   html += '<table class="loc-table"><tr><th>Nombre</th><th>Código</th><th>Localidad</th><th>Fecha/Hora</th><th>Puntaje</th><th>Estado</th></tr>';
-  data.slice().sort((a,b) => b.ts - a.ts).forEach(r => {
-    html += `<tr><td>${escapeHtml(r.nombre)}</td><td>${escapeHtml(r.codigo)}</td><td>${escapeHtml(r.localidad)}</td><td>${new Date(r.ts).toLocaleString('es-EC')}</td><td>${r.total.toFixed(2)}</td><td><span class="pill-status ${r.aprobado ? 'pass' : 'fail'}">${r.aprobado ? 'Aprobado' : 'Reprobado'}</span></td></tr>`;
+  dashboardDetailRows = data.slice().sort((a,b) => b.ts - a.ts);
+  dashboardDetailRows.forEach((r, idx) => {
+    html += `<tr class="row-clickable" onclick="mostrarDetalleIndependiente(${idx})"><td>${escapeHtml(r.nombre)}</td><td>${escapeHtml(r.codigo)}</td><td>${escapeHtml(r.localidad)}</td><td>${new Date(r.ts).toLocaleString('es-EC')}</td><td>${r.total.toFixed(2)}</td><td><span class="pill-status ${r.aprobado ? 'pass' : 'fail'}">${r.aprobado ? 'Aprobado' : 'Reprobado'}</span></td></tr>`;
   });
   html += '</table>';
 
