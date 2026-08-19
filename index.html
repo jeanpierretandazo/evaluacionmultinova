@@ -334,28 +334,6 @@
   .modal-actions{ display:flex; gap: 10px; }
   .modal-actions .btn{ flex:1; }
 
-  .modal-box.modal-detail{
-    max-width: 520px; text-align:left; max-height: 84vh; overflow-y:auto;
-  }
-  .detail-section-title{
-    font-family: var(--font-display); font-size: 14.5px; color: var(--purple-dark);
-    margin: 18px 0 8px;
-  }
-  .detail-section-title:first-of-type{ margin-top: 4px; }
-  .detail-field{ margin-bottom: 10px; }
-  .detail-field .df-label{
-    font-size: 11px; font-weight: 700; color: var(--ink-muted);
-    text-transform: uppercase; letter-spacing: .03em; margin-bottom: 2px;
-  }
-  .detail-field .df-value{ font-size: 13.5px; color: var(--ink); white-space: pre-wrap; line-height:1.4; }
-  .detail-verdict{
-    display:block; text-align:center; font-weight:700; font-size: 13.5px;
-    padding: 10px 12px; border-radius: 10px; margin-bottom: 4px;
-  }
-
-  table.loc-table tr.clickable-row{ cursor: pointer; }
-  table.loc-table tr.clickable-row:hover td{ background: var(--purple-pale); }
-
   @media (max-width: 560px){
     .card{ padding: 8px 16px 6px; }
     .row2, .row3{ flex-direction: column; }
@@ -541,7 +519,6 @@
       <div class="import-actions">
         <button class="btn btn-ghost" onclick="renderDashboard()">Actualizar dashboard</button>
         <button class="btn btn-ghost" onclick="exportarCSV()">Descargar todas las evaluaciones (CSV)</button>
-        <button class="btn btn-ghost" onclick="limpiarDatos()" style="color:var(--red); border-color:var(--red);">Borrar todos los datos</button>
       </div>
       <div class="loc-status" id="importStatus"></div>
     </div>
@@ -550,6 +527,10 @@
       <label>Filtrar por localidad:</label>
       <select id="filtroLocalidad" onchange="renderDashboard()">
         <option value="__all__">Todas las localidades</option>
+      </select>
+      <label>Filtrar por fecha:</label>
+      <select id="filtroFecha" onchange="renderDashboard()">
+        <option value="__all__">Todas las fechas</option>
       </select>
     </div>
 
@@ -569,16 +550,6 @@
   </div>
 </div>
 
-<div class="modal-overlay" id="modalDetalle">
-  <div class="modal-box modal-detail">
-    <div class="modal-title" id="detalleTitle">Detalle de evaluación</div>
-    <div id="detalleBody"></div>
-    <div class="modal-actions" style="margin-top:18px;">
-      <button class="btn btn-eval" style="flex:1;" onclick="cerrarModalDetalle()">Cerrar</button>
-    </div>
-  </div>
-</div>
-
 <script>
 // =========================================================
 // Conexión a base de datos (Supabase)
@@ -586,8 +557,8 @@
 // PASO PREVIO REQUERIDO: crea un proyecto gratis en supabase.com,
 // crea la tabla "evaluaciones" (ver instrucciones aparte) y pega aquí
 // tu Project URL y tu clave "anon public".
-const SUPABASE_URL = 'https://yrggufrjhfeolhuybgdb.supabase.co';
-const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InlyZ2d1ZnJqaGZlb2xodXliZ2RiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODQwNzY5NTQsImV4cCI6MjA5OTY1Mjk1NH0.PxJp_CeWdg9A8dMqGnUSsDW8xNNvooIPIcEwM6ak3X4';
+const SUPABASE_URL = 'PEGA_AQUI_TU_SUPABASE_URL';
+const SUPABASE_ANON_KEY = 'PEGA_AQUI_TU_SUPABASE_ANON_KEY';
 
 const SUPABASE_CONFIGURADO = !SUPABASE_URL.includes('PEGA_AQUI') && !SUPABASE_ANON_KEY.includes('PEGA_AQUI');
 
@@ -624,13 +595,6 @@ async function saveResultado(record){
     method: 'POST',
     headers: { 'Prefer': 'return=minimal' },
     body: JSON.stringify(resultadoAFila(record))
-  });
-}
-
-async function borrarTodosLosResultados(){
-  await supabaseRequest('evaluaciones?id=gt.0', {
-    method: 'DELETE',
-    headers: { 'Prefer': 'return=minimal' }
   });
 }
 
@@ -1059,7 +1023,6 @@ function agregarMensajeUbicacion(){
 
 let lastRecord = null;
 let modalCallback = null;
-let dashboardSortedData = [];
 
 function mostrarConfirmacion(titulo, texto, botonTexto, onConfirm){
   document.getElementById('modalTitle').textContent = titulo;
@@ -1078,51 +1041,6 @@ function ejecutarConfirmacion(){
   const cb = modalCallback;
   cerrarModalConfirmacion();
   if(cb) cb();
-}
-
-// =========================================================
-// Modal de detalle de evaluación por independiente (dashboard)
-// =========================================================
-function verDetalleIndependiente(idx){
-  const r = dashboardSortedData[idx];
-  if(!r) return;
-
-  document.getElementById('detalleTitle').textContent = r.nombre + ' · Código ' + r.codigo;
-
-  const body = document.getElementById('detalleBody');
-  body.innerHTML = `
-    <div class="detail-verdict" style="background:${r.aprobado ? 'var(--green-pale)' : 'var(--red-pale)'}; color:${r.aprobado ? 'var(--green)' : 'var(--red)'};">
-      ${r.aprobado ? 'APROBADO' : 'REPROBADO'} · Puntaje ${r.total.toFixed(2)} / 10.00
-    </div>
-
-    <div class="detail-section-title">Datos generales</div>
-    <div class="detail-field"><div class="df-label">Localidad</div><div class="df-value">${escapeHtml(r.localidad)}</div></div>
-    <div class="detail-field"><div class="df-label">Fecha / hora de envío</div><div class="df-value">${new Date(r.ts).toLocaleString('es-EC')}</div></div>
-    ${(r.provDetectada || r.cantDetectado || r.parrDetectada) ? `<div class="detail-field"><div class="df-label">Provincia / Cantón / Parroquia detectados</div><div class="df-value">${escapeHtml(r.provDetectada || '—')} / ${escapeHtml(r.cantDetectado || '—')} / ${escapeHtml(r.parrDetectada || '—')}</div></div>` : ''}
-
-    <div class="detail-section-title">Respuestas ingresadas por el independiente</div>
-    <div class="detail-field"><div class="df-label">Ubicación (Plus Code / coordenadas)</div><div class="df-value">${escapeHtml(r.ubicacionRaw || '—')}</div></div>
-    <div class="detail-field"><div class="df-label">Sector / Barrio</div><div class="df-value">${escapeHtml(r.sectorRaw || '—')}</div></div>
-    <div class="detail-field"><div class="df-label">Manzana</div><div class="df-value">${escapeHtml(r.manzanaRaw || '—')}</div></div>
-    <div class="detail-field"><div class="df-label">Villa</div><div class="df-value">${escapeHtml(r.villaRaw || '—')}</div></div>
-    <div class="detail-field"><div class="df-label">Calles</div><div class="df-value">${escapeHtml(r.callesRaw || '—')}</div></div>
-    <div class="detail-field"><div class="df-label">Referencia del domicilio</div><div class="df-value">${escapeHtml(r.referenciaRaw || '—')}</div></div>
-
-    <div class="detail-section-title">Desglose de puntaje</div>
-    <div class="breakdown">
-      ${row('1. Ubicación (Plus Code / coordenadas)', r.loc, 3)}
-      ${row('2. Sector / Barrio validado', r.sector, 1)}
-      ${row('3. Manzana y Villa', r.mz, 1)}
-      ${row('4. Calles (principal y secundaria)', r.calles, 2)}
-      ${row('5. Referencia del domicilio', r.ref, 3, `Color ${r.refDetalle.color}/1 · Punto de referencia ${r.refDetalle.puntoRef}/2`)}
-    </div>
-  `;
-
-  document.getElementById('modalDetalle').classList.add('show');
-}
-
-function cerrarModalDetalle(){
-  document.getElementById('modalDetalle').classList.remove('show');
 }
 
 function evaluar(){
@@ -1344,18 +1262,6 @@ async function exportarCSV(){
   URL.revokeObjectURL(url);
 }
 
-function limpiarDatos(){
-  mostrarConfirmacion('¿Borrar todos los datos?', 'Se eliminarán todas las evaluaciones acumuladas del grupo. Esta acción no se puede deshacer.', 'Sí, borrar todo', async function(){
-    try{
-      await borrarTodosLosResultados();
-    }catch(e){
-      alert('No se pudo borrar la base de datos.\n\n' + e.message);
-      return;
-    }
-    renderDashboard();
-  });
-}
-
 async function renderDashboard(){
   const container = document.getElementById('dashboardContent');
   container.innerHTML = '<div class="empty-state">Cargando evaluaciones...</div>';
@@ -1376,8 +1282,25 @@ async function renderDashboard(){
     localidades.map(l => `<option value="${escapeHtml(l)}">${escapeHtml(l)}</option>`).join('');
   if(localidades.includes(prevVal)) filterSel.value = prevVal;
 
+  const fechaSel = document.getElementById('filtroFecha');
+  const fechaMasReciente = {};
+  all.forEach(r => {
+    const f = new Date(r.ts).toLocaleDateString('es-EC');
+    if(!(f in fechaMasReciente) || r.ts > fechaMasReciente[f]) fechaMasReciente[f] = r.ts;
+  });
+  const fechas = Object.keys(fechaMasReciente).sort((a,b) => fechaMasReciente[b] - fechaMasReciente[a]);
+  const prevFecha = fechaSel.value;
+
+  fechaSel.innerHTML = '<option value="__all__">Todas las fechas</option>' +
+    fechas.map(f => `<option value="${escapeHtml(f)}">${escapeHtml(f)}</option>`).join('');
+  if(fechas.includes(prevFecha)) fechaSel.value = prevFecha;
+
   const sel = filterSel.value || '__all__';
-  const data = sel === '__all__' ? all : all.filter(r => r.localidad === sel);
+  const selFecha = fechaSel.value || '__all__';
+  const data = all.filter(r =>
+    (sel === '__all__' || r.localidad === sel) &&
+    (selFecha === '__all__' || new Date(r.ts).toLocaleDateString('es-EC') === selFecha)
+  );
 
   if(all.length === 0){
     container.innerHTML = '<div class="empty-state">Aún no hay evaluaciones registradas. Se completarán automáticamente aquí a medida que los independientes envíen sus evaluaciones.</div>';
@@ -1414,7 +1337,9 @@ async function renderDashboard(){
 
   const maxes = { loc:3, sector:1, mz:1, calles:2, ref:3 };
   const labels = { loc:'Ubicación', sector:'Sector/Barrio', mz:'Manzana y Villa', calles:'Calles', ref:'Referencia del domicilio' };
-  html += '<div class="section-title">Puntos débiles del grupo' + (sel!=='__all__' ? ' — ' + escapeHtml(sel) : '') + '</div><div class="breakdown">';
+  const filtroTxt = [sel!=='__all__' ? sel : null, selFecha!=='__all__' ? selFecha : null].filter(Boolean).join(' — ');
+
+  html += '<div class="section-title">Puntos débiles del grupo' + (filtroTxt ? ' — ' + escapeHtml(filtroTxt) : '') + '</div><div class="breakdown">';
   ['loc','sector','mz','calles','ref'].forEach(k => {
     html += row(labels[k], avg(data.map(r => r[k])), maxes[k]);
   });
@@ -1428,11 +1353,10 @@ async function renderDashboard(){
   });
   html += '</div>';
 
-  html += '<div class="section-title">Detalle por independiente evaluado' + (sel!=='__all__' ? ' — ' + escapeHtml(sel) : '') + '</div>';
+  html += '<div class="section-title">Detalle por independiente evaluado' + (filtroTxt ? ' — ' + escapeHtml(filtroTxt) : '') + '</div>';
   html += '<table class="loc-table"><tr><th>Nombre</th><th>Código</th><th>Localidad</th><th>Fecha/Hora</th><th>Puntaje</th><th>Estado</th></tr>';
-  dashboardSortedData = data.slice().sort((a,b) => a.total - b.total);
-  dashboardSortedData.forEach((r, idx) => {
-    html += `<tr class="clickable-row" onclick="verDetalleIndependiente(${idx})" title="Ver evaluación al detalle"><td>${escapeHtml(r.nombre)}</td><td>${escapeHtml(r.codigo)}</td><td>${escapeHtml(r.localidad)}</td><td>${new Date(r.ts).toLocaleString('es-EC')}</td><td>${r.total.toFixed(2)}</td><td><span class="pill-status ${r.aprobado ? 'pass' : 'fail'}">${r.aprobado ? 'Aprobado' : 'Reprobado'}</span></td></tr>`;
+  data.slice().sort((a,b) => b.ts - a.ts).forEach(r => {
+    html += `<tr><td>${escapeHtml(r.nombre)}</td><td>${escapeHtml(r.codigo)}</td><td>${escapeHtml(r.localidad)}</td><td>${new Date(r.ts).toLocaleString('es-EC')}</td><td>${r.total.toFixed(2)}</td><td><span class="pill-status ${r.aprobado ? 'pass' : 'fail'}">${r.aprobado ? 'Aprobado' : 'Reprobado'}</span></td></tr>`;
   });
   html += '</table>';
 
