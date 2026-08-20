@@ -114,6 +114,15 @@
 
   .locate-row{ display:flex; gap: 10px; }
   .locate-row input{ flex:1; font-family: var(--font-mono); font-size: 13.5px; }
+
+  .loc-suggestions{ display:none; margin-top:8px; border:1.5px solid var(--purple); border-radius:10px; overflow:hidden; background:#fff; box-shadow:0 6px 18px rgba(97,29,218,0.14); }
+  .loc-suggestions.show{ display:block; }
+  .loc-suggestion-item{ display:flex; align-items:center; gap:10px; padding:10px 12px; cursor:pointer; }
+  .loc-suggestion-item:hover{ background:var(--purple-pale); }
+  .loc-suggestion-icon{ font-size:17px; flex-shrink:0; }
+  .loc-suggestion-text{ min-width:0; }
+  .loc-suggestion-text .main{ font-weight:600; font-size:13px; color:var(--ink); font-family: var(--font-mono); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .loc-suggestion-text .sub{ font-size:11.5px; color:var(--ink-muted); margin-top:1px; }
   .btn{
     border: none; border-radius: 8px; padding: 10px 16px;
     font-size: 13.5px; font-weight: 600; cursor: pointer;
@@ -437,9 +446,9 @@
           <label>Ubicación del cliente <span class="req">*</span></label>
           <div class="hint">Pide al cliente su ubicación en Google Maps, abre el pin y copia el <strong>Plus Code</strong>. Pégalo aquí tal cual.</div>
           <div class="locate-row">
-            <input type="text" id="locInput" placeholder="Ej: 8FW9+2X Guayaquil">
-            <button class="btn btn-purple" onclick="buscarUbicacion()">Buscar ubicación</button>
+            <input type="text" id="locInput" placeholder="Ej: 8FW9+2X Guayaquil" autocomplete="off" oninput="actualizarSugerenciaUbicacion()" onblur="setTimeout(ocultarSugerenciaUbicacion, 150)">
           </div>
+          <div class="loc-suggestions" id="locSuggestions"></div>
           <div class="loc-status" id="locStatus"></div>
           <div class="auto-fields">
             <span class="auto-pill" id="pillProv">Provincia: —</span>
@@ -671,25 +680,51 @@ function isValidLocationFormat(v){
 let locationConfirmed = false;
 let detectedProv = '', detectedCant = '', detectedParr = '';
 
-function buscarUbicacion(){
-  const val = document.getElementById('locInput').value;
-  const statusEl = document.getElementById('locStatus');
-  const valid = isValidLocationFormat(val);
+function matchUbicacionSimulada(val){
+  const lower = val.toLowerCase();
+  let match = KNOWN_LOCATIONS.find(loc => loc.keys.some(k => lower.includes(k)));
+  if(!match){ match = { prov: "GUAYAS", cant: "GUAYAQUIL", parr: "TARQUI (simulado)" }; }
+  return match;
+}
 
-  if(!valid){
-    statusEl.className = 'loc-status bad';
-    statusEl.textContent = 'Formato no reconocido. Debe ser un Plus Code (Ej: 8FW9+2X Guayaquil) o coordenadas (Ej: -2.1710, -79.9224).';
+function actualizarSugerenciaUbicacion(){
+  const val = document.getElementById('locInput').value;
+  const box = document.getElementById('locSuggestions');
+  const statusEl = document.getElementById('locStatus');
+
+  // Si el texto cambia después de haber confirmado una sugerencia, se invalida
+  // la confirmación hasta que vuelva a seleccionar una sugerencia.
+  if(locationConfirmed){
     locationConfirmed = false;
     detectedProv = detectedCant = detectedParr = '';
     setPill('pillProv', 'Provincia: —', false);
     setPill('pillCant', 'Cantón: —', false);
     setPill('pillParr', 'Parroquia: —', false);
+    statusEl.className = 'loc-status';
+    statusEl.textContent = '';
+  }
+
+  const val_trim = val.trim();
+  if(!val_trim || !isValidLocationFormat(val_trim)){
+    box.classList.remove('show');
+    box.innerHTML = '';
     return;
   }
 
-  const lower = val.toLowerCase();
-  let match = KNOWN_LOCATIONS.find(loc => loc.keys.some(k => lower.includes(k)));
-  if(!match){ match = { prov: "GUAYAS", cant: "GUAYAQUIL", parr: "TARQUI (simulado)" }; }
+  const match = matchUbicacionSimulada(val_trim);
+  box.innerHTML = `<div class="loc-suggestion-item" onmousedown="seleccionarSugerenciaUbicacion()">
+      <span class="loc-suggestion-icon">📍</span>
+      <div class="loc-suggestion-text">
+        <div class="main">${escapeHtml(val_trim)}</div>
+        <div class="sub">${escapeHtml(match.parr)}, ${escapeHtml(match.cant)}, ${escapeHtml(match.prov)}</div>
+      </div>
+    </div>`;
+  box.classList.add('show');
+}
+
+function seleccionarSugerenciaUbicacion(){
+  const val = document.getElementById('locInput').value.trim();
+  const match = matchUbicacionSimulada(val);
 
   detectedProv = match.prov; detectedCant = match.cant; detectedParr = match.parr;
 
@@ -697,9 +732,16 @@ function buscarUbicacion(){
   setPill('pillCant', 'Cantón: ' + match.cant, true);
   setPill('pillParr', 'Parroquia: ' + match.parr, true);
 
+  const statusEl = document.getElementById('locStatus');
   statusEl.className = 'loc-status ok';
-  statusEl.textContent = 'Ubicación reconocida. Provincia, cantón y parroquia autocompletados.';
+  statusEl.textContent = 'Ubicación confirmada. Provincia, cantón y parroquia autocompletados.';
   locationConfirmed = true;
+
+  ocultarSugerenciaUbicacion();
+}
+
+function ocultarSugerenciaUbicacion(){
+  document.getElementById('locSuggestions').classList.remove('show');
 }
 
 function setPill(id, text, filled){
@@ -1231,6 +1273,8 @@ function reiniciar(){
   document.getElementById('refInput').value = '';
   document.getElementById('locStatus').className = 'loc-status';
   document.getElementById('locStatus').textContent = '';
+  document.getElementById('locSuggestions').classList.remove('show');
+  document.getElementById('locSuggestions').innerHTML = '';
   setPill('pillProv', 'Provincia: —', false);
   setPill('pillCant', 'Cantón: —', false);
   setPill('pillParr', 'Parroquia: —', false);
