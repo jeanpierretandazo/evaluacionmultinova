@@ -514,7 +514,7 @@
   <div class="footer-fac">
     <button class="fac-link" id="facLinkBtn" onclick="toggleFacGate()">Modo Facilitador</button>
     <div class="fac-gate" id="facGate">
-      <input type="password" id="facPassword" placeholder="Palabra clave">
+      <input type="password" id="facPassword" placeholder="Palabra clave" onkeydown="if(event.key==='Enter') validarFacilitador()">
       <button class="btn btn-purple" onclick="validarFacilitador()">Ingresar</button>
       <div class="fac-error" id="facError">Palabra clave incorrecta.</div>
     </div>
@@ -723,8 +723,9 @@ const UBICACION_TEXTO_CORRECTO = 'V4J6+2CG, 090502 Guayaquil';
 const UBICACION_COORD_CORRECTA = { lat: -2.1199201, lng: -79.8889183, tolerancia: 0.004 };
 
 function sectorCoincide(v){
-  const t = normalizar(v);
-  return t.includes('guayacanes') && (t.includes('4ta') || t.includes('4a') || t.includes('cuarta'));
+  const t = normalizar(v).replace(/\s+/g, ' ');
+  if(!t.includes('guayacanes')) return false;
+  return /4\s*ta\b/.test(t) || /4\s*a\b/.test(t) || /\bcuarta\b/.test(t) || /\b4\b/.test(t);
 }
 function manzanaCoincide(v){ return /\b215\b/.test(normalizar(v)); }
 function villaCoincide(v){ return /\b16\b/.test(normalizar(v)); }
